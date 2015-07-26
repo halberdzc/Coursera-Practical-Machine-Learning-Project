@@ -1,0 +1,93 @@
+---
+title: "Human Activity Recognition Data Analysis"
+author: "Cheng Zhang"
+date: "July 26, 2015"
+output: html_document
+---
+
+##Overall
+
+This project is to predict the human manner in which they did the exercise. The data is collected from accelerometers on belt, forearm, arm, and dumbbell of 6 participants. Data is loaded and cleansed in the beginning. Then random forests algorithm is applied to train the model. The model is evaluated at test dataset and yields great accuracy as 0.9971. At last, the final model is used to predict 20 different test cases.
+
+##Data Preparation
+
+Download the datasets into local directory in PC, and load them into R environment
+```{r}
+setwd("C:/Users/chengz2/Downloads/coursera- Practical Machine Learning")
+training_org <- read.csv("pml-training.csv", na.strings=c("NA", "#DIV/0!"))
+test_org  <- read.csv('pml-testing.csv', na.strings=c("NA", "#DIV/0!"))
+```
+
+Some data cleansing process needs to be done before modeling. The data shows some variables have missing values over 97%, while the rest of them have no missing values. So we remove these variables with high percentage of missing values.
+```{r}
+na_pct <-colSums(is.na(training_org)/nrow(training_org))
+training <-training_org[na_pct < 0.97]
+```
+
+First five columns which indicate user and timestamp information are removed, cause they are not useful in analysis.
+```{r}
+training2 <- training[, -c(1:5)]
+```
+
+
+Near zero variance variables are also removed. 
+```{r, results='hide'}
+library(caret)
+zerovar <-nearZeroVar(training2, saveMetrics = TRUE)
+training3 <- training2[,!(zerovar$nzv)]
+```
+
+Finally, we have 54 variables out of 160 variables from original file for modeling.
+
+##Modeling
+
+First, the preprocessed file is split into training and test datasets before modeling.
+```{r}
+set.seed(12345)
+inTrain <- createDataPartition(training3$classe, p = 0.60, list = FALSE)
+training3_train <- training3[inTrain, ]
+training3_test <- training3[-inTrain, ]
+```
+
+We decide to use random forests algorithm to train the model. Random forests is a popular and effective algorithm resulting in high accuracy. Variable classe is used as response variable, and all the others are used as predictors. There is no need for cross-validation to get an unbiased estimate of the test set error. It is estimated internally during the run.
+
+```{r, results='hide'}
+library(randomForest)
+rf <- train(classe ~ ., method="rf", data=training3_train)
+```
+
+
+In the final model, the importance of predictors are ordered in the following figure. Only top 30 predictors are listed here.
+```{r, echo=FALSE}
+plot(varImp(rf),30)
+```
+
+Next, test the model against the test set. The accuray is  0.9971. So the expected out of sample error is 0.0029.
+
+```{r}
+rf_test <- predict(rf,training3_test)
+confusionMatrix(rf_test, training3_test$classe)
+```
+
+##Make predictions on 20 test cases
+
+The same preprocessing methods are applied on 20 test cases. Then the model predictions on test case are made.
+
+```{r, eval=FALSE}
+test <-test_org[na_pct < 0.97]
+test2 <- test[, -c(1:5)]
+test3 <- test2[,!(zerovar$nzv)]
+
+rf_ntest <- predict(rf, test3)
+
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(rf_ntest)
+```
+

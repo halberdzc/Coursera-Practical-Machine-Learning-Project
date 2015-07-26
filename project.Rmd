@@ -31,7 +31,7 @@ training2 <- training[, -c(1:5)]
 
 
 Near zero variance variables are also removed. 
-```{r, results='hide'}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(caret)
 zerovar <-nearZeroVar(training2, saveMetrics = TRUE)
 training3 <- training2[,!(zerovar$nzv)]
@@ -51,7 +51,7 @@ training3_test <- training3[-inTrain, ]
 
 We decide to use random forests algorithm to train the model. Random forests is a popular and effective algorithm resulting in high accuracy. Variable classe is used as response variable, and all the others are used as predictors. There is no need for cross-validation to get an unbiased estimate of the test set error. It is estimated internally during the run.
 
-```{r, results='hide'}
+```{r, message=FALSE, warning=FALSE, results='hide', cache=TRUE}
 library(randomForest)
 rf <- train(classe ~ ., method="rf", data=training3_train)
 ```
